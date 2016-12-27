@@ -58,12 +58,75 @@ update msg model =
     case msg of
         Input name ->
             Debug.log "Input Model: "
-                { model
-                    | name = name
-                }
+                { model | name = name }
+
+        Cancel ->
+            { model
+                | name = ""
+                , playerId = Nothing
+            }
+
+        Save ->
+            if (String.isEmpty model.name) then
+                model
+            else
+                save model
 
         _ ->
             model
+
+
+save : Model -> Model
+save model =
+    case model.playerId of
+        Just id ->
+            edit model id
+
+        Nothing ->
+            add model
+
+
+add : Model -> Model
+add model =
+    let
+        player =
+            Player (List.length model.players) model.name 0
+    in
+        { model
+            | players = player :: model.players
+            , name = ""
+        }
+
+
+edit : Model -> Int -> Model
+edit model id =
+    let
+        newPlayers =
+            List.map
+                (\player ->
+                    if player.id == id then
+                        { player | name = model.name }
+                    else
+                        player
+                )
+                model.players
+
+        newPlays =
+            List.map
+                (\play ->
+                    if play.playerId == id then
+                        { play | playerName = model.name }
+                    else
+                        play
+                )
+                model.plays
+    in
+        { model
+            | players = newPlayers
+            , plays = newPlays
+            , name = ""
+            , playerId = Nothing
+        }
 
 
 
