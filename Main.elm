@@ -19,15 +19,15 @@ type alias Model =
 type alias Player =
     { id : Int
     , name : String
-    , totalPoints : Int
+    , points : Int
     }
 
 
 type alias Play =
     { id : Int
     , playerId : Int
-    , playerName : String
-    , pointsScored : Int
+    , name : String
+    , points : Int
     }
 
 
@@ -57,7 +57,6 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         Input name ->
-            Debug.log "Input Model: "
                 { model | name = name }
 
         Cancel ->
@@ -71,6 +70,9 @@ update msg model =
                 model
             else
                 save model
+        
+        Score player points ->
+            score model player points
 
         _ ->
             model
@@ -115,7 +117,7 @@ edit model id =
             List.map
                 (\play ->
                     if play.playerId == id then
-                        { play | playerName = model.name }
+                        { play | name = model.name }
                     else
                         play
                 )
@@ -129,6 +131,25 @@ edit model id =
         }
 
 
+score : Model -> Player -> Int -> Model
+score model scorer points =
+    let
+        newPlayers =
+            List.map
+                (\player ->
+                    if player.id == scorer.id then
+                        { player
+                            | points = player.points + points
+                        }
+                    else
+                        player
+                )
+                model.players
+
+        play =
+            Play (List.length model.plays) scorer.id scorer.name points
+    in
+        { model | players = newPlayers, plays = play :: model.plays }
 
 -- view
 
@@ -137,10 +158,74 @@ view : Model -> Html Msg
 view model =
     div [ class "scoreboard" ]
         [ h1 [] [ text "Score Keeper" ]
+        , playerSection model
         , playerForm model
         , p [] [ text (toString model) ]
         ]
 
+
+playerSection : Model -> Html Msg
+playerSection model =
+    div []
+        [ playerListHeader
+        , playerListView model
+        , pointTotalView model
+        ]
+
+
+playerListHeader : Html Msg
+playerListHeader =
+    header []
+        [ div [] [ text "Name" ]
+        , div [] [ text "Points" ]
+        ]
+
+
+playerListView : Model -> Html Msg
+playerListView model =
+    model.players
+        |> List.sortBy .name
+        |> List.map playerView
+        |> ul []
+
+
+playerView : Player -> Html Msg
+playerView player =
+    li []
+        [ i
+            [ class "edit"
+            , onClick (Edit player)
+            ]
+            []
+        , div []
+            [ text player.name ]
+        , button 
+            [ type_ "button"
+            , onClick (Score player 2)
+            ]
+            [ text "2pts" ]
+        , button
+            [ type_ "button"
+            , onClick (Score player 3)
+            ]
+            [ text "3pts" ]
+        , div []
+            [ text (toString player.points) ]
+        ]
+
+
+pointTotalView : Model -> Html Msg
+pointTotalView model =
+    let
+      total =
+        List.map .points model.plays
+            |> List.sum
+    in
+        footer []
+            [ div [] [ text "Total: " ]
+            , div [] [ text (toString total) ]
+            ]
+      
 
 playerForm : Model -> Html Msg
 playerForm model =
