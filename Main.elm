@@ -57,7 +57,7 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         Input name ->
-                { model | name = name }
+            { model | name = name }
 
         Cancel ->
             { model
@@ -70,12 +70,39 @@ update msg model =
                 model
             else
                 save model
-        
+
         Score player points ->
             score model player points
 
-        _ ->
-            model
+        Edit player ->
+            { model
+                | name = player.name
+                , playerId = Just player.id
+            }
+
+        DeletePlay play ->
+            deletePlay model play
+
+
+deletePlay : Model -> Play -> Model
+deletePlay model play =
+    let
+        newPlays =
+            List.filter (\p -> p.id /= play.id) model.plays
+
+        newPlayers =
+            List.map
+                (\player ->
+                    if player.id == play.playerId then
+                        { player
+                            | points = player.points - 1 * play.points
+                        }
+                    else
+                        player
+                )
+                model.players
+    in
+        { model | plays = newPlays, players = newPlayers }
 
 
 save : Model -> Model
@@ -151,6 +178,8 @@ score model scorer points =
     in
         { model | players = newPlayers, plays = play :: model.plays }
 
+
+
 -- view
 
 
@@ -160,7 +189,43 @@ view model =
         [ h1 [] [ text "Score Keeper" ]
         , playerSection model
         , playerForm model
-        , p [] [ text (toString model) ]
+        , playSection model
+        ]
+
+
+playSection : Model -> Html Msg
+playSection model =
+    div []
+        [ playListHeader
+        , playListView model
+        ]
+
+
+playListHeader : Html Msg
+playListHeader =
+    header []
+        [ div [] [ text "Plays" ]
+        , div [] [ text "Points" ]
+        ]
+
+
+playListView : Model -> Html Msg
+playListView model =
+    model.plays
+        |> List.map playView
+        |> ul []
+
+
+playView : Play -> Html Msg
+playView play =
+    li []
+        [ i
+            [ class "remove"
+            , onClick (DeletePlay play)
+            ]
+            []
+        , div [] [ text play.name ]
+        , div [] [ text (toString play.points) ]
         ]
 
 
@@ -199,7 +264,7 @@ playerView player =
             []
         , div []
             [ text player.name ]
-        , button 
+        , button
             [ type_ "button"
             , onClick (Score player 2)
             ]
@@ -217,15 +282,15 @@ playerView player =
 pointTotalView : Model -> Html Msg
 pointTotalView model =
     let
-      total =
-        List.map .points model.plays
-            |> List.sum
+        total =
+            List.map .points model.plays
+                |> List.sum
     in
         footer []
             [ div [] [ text "Total: " ]
             , div [] [ text (toString total) ]
             ]
-      
+
 
 playerForm : Model -> Html Msg
 playerForm model =
